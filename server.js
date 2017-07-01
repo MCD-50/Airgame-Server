@@ -24,7 +24,6 @@ import {
 	BUTTON_RELEASE
 } from './src/constant';
 
-
 let current_players = [];
 let count = 30;
 let rooms = [];
@@ -40,14 +39,18 @@ http.listen(port, () => {
 });
 
 io.on(CONNECTION, (socket) => {
-	console.log(socket);
-
+	
 	//send list of available room asap
 	io.emit(AVAILABLE_ROOM, rooms.slice());
 
 	socket.on(CREATE_ROOM, (room_name) => {
-		rooms.push(room_name);
-		io.emit(AVAILABLE_ROOM, rooms.slice());
+		const has = rooms.filter(x => x == room_name).length;
+		if (has < 1) {
+			rooms.push(room_name);
+			io.emit(AVAILABLE_ROOM, rooms.slice());
+		}else{
+			socket.emit(ERROR, 'Room already exists.');
+		}
 	})
 
 	socket.on(JOIN, (player, room_name) => {
@@ -58,7 +61,7 @@ io.on(CONNECTION, (socket) => {
 		} else {
 			current_players.push(player);
 			socket.join(room_name);
-			socket.broadcast.emit(JOINED, `${player.name} has joined`);
+			socket.broadcast.emit(JOINED,  player.name + ' has joined');
 			io.emit(PLAYER_LIST, current_players.slice())
 		}
 	});
@@ -69,7 +72,7 @@ io.on(CONNECTION, (socket) => {
 		if (has > 0) {
 			current_players = current_players.filter(x => x.name != player.name).slice();
 			socket.leave(room_name);
-			socket.broadcast.emit(LEFT, `${player.name} has left`);
+			socket.broadcast.emit(LEFT, player.name + ' has left');
 			io.emit(PLAYER_LIST, current_players.slice());
 		} else {
 			socket.emit(ERROR, current_players.slice());
